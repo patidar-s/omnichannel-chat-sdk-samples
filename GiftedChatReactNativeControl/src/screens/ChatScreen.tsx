@@ -15,9 +15,22 @@ import { parseTranscript } from '../utils/parser';
 import attachementImage from '../assets/img/attachment.png';
 import fetchOmnichannelConfig from '../utils/fetchOmnichannelConfig';
 import transformLiveChatConfig, { ConfigurationManager } from '../utils/transformLiveChatConfig';
+import { DirectLine } from 'botframework-directlinejs';
 
 // console.disableYellowBox = true;
 const omnichannelConfig: any = fetchOmnichannelConfig();
+
+let directLine = new DirectLine({
+    secret: 'cccc'/* put your Direct Line secret here */,
+    // token:token.token /* or put your Direct Line token here (supply secret OR token, not both) */,
+    // domain: /* optional: if you are not using the default Direct Line endpoint, e.g. if you are using a region-specific endpoint, put its full URL here */
+    // webSocket: /* optional: false if you want to use polling GET to receive messages. Defaults to true (use WebSocket). */,
+    // pollingInterval: /* optional: set polling interval in milliseconds. Defaults to 1000 */,
+    // timeout: /* optional: a timeout in milliseconds for requests to the bot. Defaults to 20000 */,
+    // conversationStartProperties: { /* optional: properties to send to the bot on conversation start */
+    //     locale: 'en-US'
+    // }
+  });
 
 const typingAnimationDuration = 1500;
 const buttons = {
@@ -240,7 +253,24 @@ const ChatScreen = (props: ChatScreenProps) => {
 
     // Starts NEW chat only if chat screen is visible & chat has not started
     const {hasChatStarted} = state;
-    !hasChatStarted && !preChatSurvey && startNewChat();
+    const customContext = {
+      'patientFirstName': { 'value': 'Bryce', 'isDisplayable': true },
+      'patientLastName': { 'value': 'MYBSW', 'isDisplayable': true },
+      'patientGender': { 'value': 'male', 'isDisplayable': true },
+      'patientMRN': { 'value': '740000035', 'isDisplayable': true },
+      'isPatientProxy': { 'value': true, 'isDisplayable': true },
+      'accountFirstName': { 'value': 'Mom', 'isDisplayable': true },
+      'accountLastName': { 'value': 'Proxy', 'isDisplayable': true },
+      'patientBirthDate': { 'value': '05/03/1988', 'isDisplayable': true },
+  };
+
+  const optionalParams = {
+      customContext,
+  };
+
+    !hasChatStarted && !preChatSurvey && startNewChat(optionalParams);
+    
+    
   }, [state, chatSDK, preChatSurvey]);
 
   const onSend = useCallback(async (outboundMessages: IMessage[]) => {
@@ -483,8 +513,19 @@ const ChatScreen = (props: ChatScreenProps) => {
     )
   }
 
+   function isJsonString(str: string) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+}
+
   const renderChatWidget = () => {
-    if (preChatSurvey && !preChatResponse) {
+    const text = state.messages?.[0]?.text;
+    // if (preChatSurvey && !preChatResponse) {
+    if (text && isJsonString(text)) {
       const onExecuteAction = async (action: any) => {
         const {data: preChatResponse} = action;
         const optionalParams: any = {
@@ -496,7 +537,8 @@ const ChatScreen = (props: ChatScreenProps) => {
       }
 
       return (
-        <AdaptiveCard payload={preChatSurvey} onExecuteAction={onExecuteAction}/>
+        // <AdaptiveCard payload={preChatSurvey} onExecuteAction={onExecuteAction}/>
+        <AdaptiveCard payload={JSON.parse(text).attachments?.[0].content} onExecuteAction={onExecuteAction}/>
       )
     }
 
